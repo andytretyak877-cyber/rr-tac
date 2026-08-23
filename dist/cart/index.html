@@ -48,8 +48,8 @@
     })(window, document, 'script', 'cloud.roistat.com', 'e5a9937f40bc108389d85675efc963a6');
   </script>
   <!-- rr-tac:roistat:end -->
-  <script src="/assets/js/theme.js?v=2e4d37d6c3"></script>
-  <link rel="stylesheet" href="/assets/css/style.css?v=2e4d37d6c3">
+  <script src="/assets/js/theme.js?v=4b9515052e"></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=4b9515052e">
   <style>
     .cart-section { padding-block: 2rem 5rem; min-height: 60vh; }
     .cart-layout { display: grid; gap: 3rem; align-items: start; }
@@ -211,6 +211,7 @@
           <input type="hidden" name="product" id="formProduct" value="">
           <input type="hidden" name="from_name" value="Rhino Rescue сайт">
           <input type="checkbox" name="botcheck" style="display:none">
+          <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">
 
           <div class="form-group">
             <label class="form-label" for="cartName">Ваше имя <span>*</span></label>
@@ -221,8 +222,12 @@
             <input class="form-input" type="tel" id="cartPhone" name="phone" placeholder="+7 (___) ___-__-__" required autocomplete="tel">
           </div>
           <div class="form-group">
-            <label class="form-label" for="cartComment">Комментарий или адрес</label>
-            <textarea class="form-textarea" id="cartComment" name="message" placeholder="Напишите адрес доставки или вопрос..."></textarea>
+            <label class="form-label" for="cartAddress">Адрес доставки</label>
+            <textarea class="form-textarea" id="cartAddress" name="address" maxlength="500" placeholder="Город, улица, дом, квартира"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cartComment">Комментарий</label>
+            <textarea class="form-textarea" id="cartComment" name="message" maxlength="2000" placeholder="Дополнительная информация к заказу"></textarea>
           </div>
           <button class="btn btn-primary btn-full btn-lg" type="submit" id="cartSubmitBtn">
             Оформить заказ
@@ -254,8 +259,8 @@
 
 <button class="scroll-top" id="scrollTop" aria-label="Наверх">↑</button>
 
-<script src="/assets/js/cart.js?v=2e4d37d6c3"></script>
-<script src="/assets/js/main.js?v=2e4d37d6c3"></script>
+<script src="/assets/js/cart.js?v=4b9515052e"></script>
+<script src="/assets/js/main.js?v=4b9515052e"></script>
 
 <script>
   // Add Web3Forms submission logic specific for cart form
@@ -278,13 +283,15 @@
       cartForm.dataset.submitting = 'true';
 
       try {
-        await window.submitLeadForm(cartForm);
+        const result = await window.submitMoySkladOrder(cartForm, window.cart.getOrderItems());
+        const message = cartSuccess.querySelector('p');
+        if (message && result.message) message.textContent = result.message;
         cartForm.style.display = 'none';
         cartSuccess.classList.add('show');
         window.cart.clearCart();
       } catch (err) {
         console.error(err);
-        alert('Ошибка сети. Проверьте подключение и повторите попытку.');
+        alert(err.message || 'Ошибка сети. Проверьте подключение и повторите попытку.');
       } finally {
         delete cartForm.dataset.submitting;
         btn.textContent = 'Оформить заказ';

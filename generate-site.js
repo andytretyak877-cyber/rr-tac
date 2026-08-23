@@ -309,7 +309,7 @@ function productMarkup(product, related) {
         </div>
         <div class="product-cta">
           <button class="btn btn-primary btn-lg" id="addProductToCart" type="button">В корзину</button>
-          <button class="btn btn-secondary btn-lg" data-modal="order" data-product="${escapeHtml(product.name)}" type="button">Оставить заявку</button>
+          <button class="btn btn-secondary btn-lg" data-modal="order" data-product="${escapeHtml(product.name)}" data-order-product-id="${escapeHtml(product.id)}" data-quantity-source="productQtyInput" type="button">Купить в 1 клик</button>
         </div>
         <div class="product-specs">
           <div class="product-specs__title">Характеристики</div>

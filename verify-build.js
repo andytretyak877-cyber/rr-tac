@@ -11,6 +11,13 @@ const seenTitles = new Map();
 const seenDescriptions = new Map();
 const seenCanonicals = new Map();
 
+const productIds = products.map(product => String(product.id || ''));
+if (productIds.some(id => !id)) fail('products.json: every product must have an id');
+if (new Set(productIds).size !== productIds.length) fail('products.json: ids must be unique');
+const articles = products.map(product => String(product.sku || ''));
+if (articles.some(article => !article)) fail('products.json: every product must have a sku/article');
+if (new Set(articles).size !== articles.length) fail('products.json: sku/articles must be unique');
+
 function fail(message) {
   failures.push(message);
 }
@@ -52,6 +59,9 @@ for (const product of products) {
   if (!html.includes('application/ld+json')) fail(`${relativePath}: JSON-LD is missing`);
   if (!html.includes(`id="productData"`)) fail(`${relativePath}: product data is missing`);
   if (!html.includes(`<h1 class="product-title">`)) fail(`${relativePath}: H1 is missing`);
+  if (!html.includes(`data-order-product-id="${product.id}"`)) {
+    fail(`${relativePath}: one-click order must submit products.json id`);
+  }
 }
 
 const categories = [...new Set(products.map(product => product.category))];
@@ -74,17 +84,38 @@ read('favicon.ico');
 
 const mainJs = read(path.join('assets', 'js', 'main.js'));
 const sendPhp = read(path.join('assets', 'php', 'send.php'));
+const orderPhp = read(path.join('assets', 'php', 'order.php'));
+const moyskladPhp = read(path.join('assets', 'php', 'moysklad.php'));
 if ((mainJs.match(/reachGoal/g) || []).length !== 1 || !mainJs.includes("const LEAD_GOAL = 'qleads'")) {
   fail('assets/js/main.js: lead goal must be declared and sent exactly once');
 }
-const roistatKey = sendPhp.match(/define\('ROISTAT_INTEGRATION_KEY',\s*'([^']+)'\)/)?.[1];
-if (!roistatKey) {
-  fail('assets/php/send.php: Roistat integration key is missing');
-} else if (mainJs.includes(roistatKey)) {
-  fail('assets/js/main.js: Roistat integration key must not be exposed to browsers');
+if (!sendPhp.includes("rr_find") && !sendPhp.includes('$roistatConfigPath')) {
+  fail('assets/php/send.php: server-side Roistat configuration lookup is missing');
 }
 if (!sendPhp.includes('ROISTAT_INTEGRATION_KEY') || /test\.txt|file_put_contents/.test(sendPhp)) {
   fail('assets/php/send.php: unsafe or incomplete Roistat handler');
+}
+if (!mainJs.includes('/assets/php/order.php') || !mainJs.includes('submitMoySkladOrder')) {
+  fail('assets/js/main.js: MoySklad order submission is missing');
+}
+if (!orderPhp.includes('Заказ в МойСклад НЕ создан') || !orderPhp.includes('rr_rate_limit')) {
+  fail('assets/php/order.php: manager notification or backend rate limit is missing');
+}
+if (!orderPhp.includes('if ($orderCreated)') || orderPhp.includes('if ($orderCreated || $managerMailSent)')) {
+  fail('assets/php/order.php: buyer success must require a confirmed MoySklad order');
+}
+if (!moyskladPhp.includes("'reserve'") || !moyskladPhp.includes("'price'")) {
+  fail('assets/php/moysklad.php: position price or reserve is missing');
+}
+if (!moyskladPhp.includes("$product['id']") || !moyskladPhp.includes("$product['sku']") || !moyskladPhp.includes("'filter' => 'article=' . $item['article']")) {
+  fail('assets/php/moysklad.php: id-to-sku-to-MoySklad mapping is incomplete');
+}
+if (fs.existsSync(path.join(dist, 'config', 'moysklad.php'))) {
+  fail('dist must not contain config/moysklad.php');
+}
+const cartHtml = read(path.join('cart', 'index.html'));
+if (!cartHtml.includes('name="address"') || !cartHtml.includes('id="cartComment"')) {
+  fail('cart/index.html: delivery address and comment must be separate');
 }
 
 for (const htmlFile of walk(dist).filter(file => file.endsWith('.html'))) {
@@ -120,6 +151,17 @@ for (const htmlFile of walk(dist).filter(file => file.endsWith('.html'))) {
     const url = match[1];
     if (!url || /^(?:https?:|mailto:|tel:|data:|javascript:|#)/i.test(url)) continue;
     if (!localTargetExists(url, htmlFile)) fail(`${relativePath}: broken local link ${url}`);
+  }
+}
+
+for (const file of walk(dist).filter(file => /\.(?:php|js|json|html)$/i.test(file))) {
+  const content = fs.readFileSync(file, 'utf8');
+  const relativePath = path.relative(dist, file);
+  if (/Authorization:\s*Bearer\s+[A-Za-z0-9._-]{20,}/i.test(content)) {
+    fail(`${relativePath}: embedded Bearer token detected`);
+  }
+  if (/['"]token['"]\s*=>\s*['"][A-Za-z0-9._-]{20,}['"]/i.test(content)) {
+    fail(`${relativePath}: embedded configuration token detected`);
   }
 }
 

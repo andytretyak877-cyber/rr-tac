@@ -16,7 +16,8 @@ window.cart = {
     try {
       const data = localStorage.getItem('rr-cart');
       if (data) {
-        this.items = JSON.parse(data);
+        const parsed = JSON.parse(data);
+        this.items = Array.isArray(parsed) ? parsed.filter(item => item?.id) : [];
       }
     } catch (e) {
       console.error('Error loading cart', e);
@@ -31,16 +32,18 @@ window.cart = {
   },
 
   addToCart(product, qty = 1) {
-    const existing = this.items.find(item => item.id === product.id);
+    const productId = String(product.id || '');
+    if (!productId) return;
+    const existing = this.items.find(item => item.id === productId);
     if (existing) {
       existing.quantity += qty;
     } else {
       this.items.push({
-        id: product.id,
+        id: productId,
         name: product.name,
         price: parseFloat(product.priceRetail || product.price || 0),
         image: this.normalizeAssetPath(product.image || ''),
-        sku: product.sku || '',
+        sku: product.sku || productId,
         quantity: qty
       });
     }
@@ -74,6 +77,13 @@ window.cart = {
 
   getTotalPrice() {
     return this.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  },
+
+  getOrderItems() {
+    return this.items.map(item => ({
+      id: String(item.id),
+      quantity: Number.parseInt(item.quantity, 10)
+    }));
   },
 
   normalizeAssetPath(value = '') {
@@ -142,7 +152,7 @@ window.cart = {
       if (totalElement) totalElement.textContent = '0 ₽';
       if (hiddenProductInput) hiddenProductInput.value = '';
       
-      const submitBtn = document.getElementById('orderSubmitBtn');
+      const submitBtn = document.getElementById('cartSubmitBtn');
       if (submitBtn) submitBtn.disabled = true;
       return;
     }
@@ -189,7 +199,7 @@ window.cart = {
     if (totalElement) totalElement.textContent = totalFmt;
     if (hiddenProductInput) hiddenProductInput.value = cartTextForEmail;
     
-    const submitBtn = document.getElementById('orderSubmitBtn');
+    const submitBtn = document.getElementById('cartSubmitBtn');
     if (submitBtn) submitBtn.disabled = false;
   }
 };

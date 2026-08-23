@@ -115,6 +115,41 @@ async function sendLeadToWeb3Forms(data) {
   return result;
 }
 
+function createSubmissionId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  const random = new Uint32Array(4);
+  window.crypto?.getRandomValues?.(random);
+  return `${Date.now().toString(16)}-${Array.from(random, value => value.toString(16).padStart(8, '0')).join('')}`;
+}
+
+async function sendOrderToBackend(form, items) {
+  if (!form.dataset.submissionId) form.dataset.submissionId = createSubmissionId();
+  const payload = {
+    submission_id: form.dataset.submissionId,
+    website: form.elements.website?.value || '',
+    name: form.elements.name?.value || '',
+    phone: form.elements.phone?.value || '',
+    address: form.elements.address?.value || '',
+    comment: form.elements.message?.value || '',
+    items: items.map(item => ({ id: String(item.id), quantity: item.quantity }))
+  };
+  const response = await fetch('/assets/php/order.php', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify(payload)
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.success) {
+    if (response.status !== 409) delete form.dataset.submissionId;
+    throw new Error(result.message || 'Не удалось оформить заказ');
+  }
+  return result;
+}
+
 function reachLeadGoal() {
   if (typeof window.ym === 'function') {
     window.ym(YANDEX_METRIKA_ID, 'reachGoal', LEAD_GOAL);
@@ -137,6 +172,17 @@ window.submitLeadForm = async function(form) {
 
   reachLeadGoal();
   return { success: true, web3FormsAccepted, roistatAccepted };
+};
+
+window.submitMoySkladOrder = async function(form, items) {
+  const [orderResult, roistatResult] = await Promise.allSettled([
+    sendOrderToBackend(form, items),
+    sendLeadToRoistat(new FormData(form))
+  ]);
+  if (roistatResult.status === 'rejected') console.error('Roistat error:', roistatResult.reason);
+  if (orderResult.status === 'rejected') throw orderResult.reason;
+  reachLeadGoal();
+  return orderResult.value;
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -267,21 +313,23 @@ function initOrderModal() {
     <div class="modal-overlay" id="orderModal" role="dialog" aria-modal="true" aria-label="Форма заявки">
       <div class="modal">
         <div class="modal__header">
-          <span class="modal__title">Оставить заявку</span>
+          <span class="modal__title" id="orderModalTitle">Оставить заявку</span>
           <button class="modal__close" id="orderModalClose" aria-label="Закрыть">✕</button>
         </div>
         <div class="modal__body">
           <div class="form-success" id="orderFormSuccess">
             <div class="form-success__icon">✓</div>
-            <h3>Заявка принята!</h3>
-            <p>Наш менеджер свяжется с вами в течение 30 минут в рабочее время.</p>
+            <h3 id="orderSuccessTitle">Заявка принята!</h3>
+            <p id="orderSuccessMessage">Наш менеджер свяжется с вами в течение 30 минут в рабочее время.</p>
           </div>
           <form id="orderForm" novalidate>
             <input type="hidden" name="access_key" value="3d0e28bc-7458-4208-9a0d-4b917d608a79">
             <input type="hidden" name="subject" id="formSubject" value="Новая заявка — Rhino Rescue">
             <input type="hidden" name="product" id="orderFormProduct" value="">
+            <input type="hidden" name="product_id" id="orderFormProductId" value="">
             <input type="hidden" name="from_name" value="Rhino Rescue сайт">
             <input type="checkbox" name="botcheck" style="display:none">
+            <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">
 
             <div id="orderFormProductDisplay" class="form-product-display" style="display:none">
               <span class="form-product-display__icon">📦</span>
@@ -298,7 +346,7 @@ function initOrderModal() {
             </div>
             <div class="form-group">
               <label class="form-label" for="orderQty">Количество</label>
-              <input class="form-input" type="number" id="orderQty" name="quantity" placeholder="1" min="1">
+              <input class="form-input" type="number" id="orderQty" name="quantity" placeholder="1" min="1" max="9999">
               <span class="form-hint">Для оптовых цен — уточните количество</span>
             </div>
             <div class="form-group">
@@ -324,12 +372,19 @@ function initOrderModal() {
   const form = document.getElementById('orderForm');
   const success = document.getElementById('orderFormSuccess');
   const productInput = document.getElementById('orderFormProduct');
+  const productIdInput = document.getElementById('orderFormProductId');
   const productDisplay = document.getElementById('orderFormProductDisplay');
   const productName = document.getElementById('orderFormProductName');
+  const modalTitle = document.getElementById('orderModalTitle');
+  const successTitle = document.getElementById('orderSuccessTitle');
+  const successMessage = document.getElementById('orderSuccessMessage');
+  const quantityInput = document.getElementById('orderQty');
+  const submitButton = document.getElementById('orderModalSubmitBtn');
 
   // Open modal
-  window.openOrderModal = (productTitle = '') => {
+  window.openOrderModal = (productTitle = '', options = {}) => {
     if (!overlay) return;
+    const productId = options.productId || '';
     if (productTitle) {
       productInput.value = productTitle;
       productName.textContent = productTitle;
@@ -340,6 +395,15 @@ function initOrderModal() {
       productDisplay.style.display = 'none';
       document.getElementById('formSubject').value = 'Новая заявка — Rhino Rescue';
     }
+    productIdInput.value = productId;
+    quantityInput.value = productId ? String(options.quantity || 1) : '';
+    quantityInput.required = Boolean(productId);
+    modalTitle.textContent = productId ? 'Оформить заказ' : 'Оставить заявку';
+    submitButton.textContent = productId ? 'Оформить заказ' : 'Отправить заявку';
+    successTitle.textContent = productId ? 'Заказ принят!' : 'Заявка принята!';
+    successMessage.textContent = productId
+      ? 'Менеджер свяжется с вами в ближайшее время.'
+      : 'Наш менеджер свяжется с вами в течение 30 минут в рабочее время.';
     form.style.display = 'block';
     success.classList.remove('show');
     overlay.classList.add('open');
@@ -353,6 +417,7 @@ function initOrderModal() {
     document.body.classList.remove('modal-open');
     setTimeout(() => {
       form.reset();
+      delete form.dataset.submissionId;
       success.classList.remove('show');
       form.style.display = 'block';
     }, 300);
@@ -366,7 +431,16 @@ function initOrderModal() {
 
   // CTA buttons that open the modal
   document.querySelectorAll('[data-modal="order"]').forEach(btn => {
-    btn.addEventListener('click', () => openOrderModal(btn.dataset.product || ''));
+    btn.addEventListener('click', () => {
+      const quantitySource = btn.dataset.quantitySource
+        ? document.getElementById(btn.dataset.quantitySource)
+        : null;
+      const quantity = Math.max(1, Number.parseInt(quantitySource?.value, 10) || 1);
+      openOrderModal(btn.dataset.product || '', {
+        productId: btn.dataset.orderProductId || '',
+        quantity
+      });
+    });
   });
 
   /* Form submission via Web3Forms */
@@ -387,15 +461,19 @@ function initOrderModal() {
       form.dataset.submitting = 'true';
 
       try {
-        await window.submitLeadForm(form);
+        const productId = productIdInput.value;
+        const result = productId
+          ? await window.submitMoySkladOrder(form, [{ id: productId, quantity: Number.parseInt(quantityInput.value, 10) }])
+          : await window.submitLeadForm(form);
+        if (productId && result.message) successMessage.textContent = result.message;
         form.style.display = 'none';
         success.classList.add('show');
       } catch (err) {
         console.error('Form error:', err);
-        alert('Ошибка отправки. Пожалуйста, позвоните нам напрямую.');
+        alert(err.message || 'Ошибка отправки. Пожалуйста, позвоните нам напрямую.');
       } finally {
         delete form.dataset.submitting;
-        btn.textContent = 'Отправить заявку';
+        btn.textContent = productIdInput.value ? 'Оформить заказ' : 'Отправить заявку';
         btn.disabled = false;
       }
     });
