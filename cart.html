@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Корзина | RR-TAC</title>
+  <meta name="description" content="Корзина товаров Rhino Rescue.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <script src="assets/js/theme.js"></script>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .cart-section { padding-block: 2rem 5rem; min-height: 60vh; }
+    .cart-layout { display: grid; gap: 3rem; align-items: start; }
+    @media (min-width: 1024px) { .cart-layout { grid-template-columns: 60fr 40fr; gap: 4rem; } }
+    
+    .cart-checkout-box {
+      background: var(--clr-bg-2);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--radius-xl);
+      padding: 2rem;
+      position: sticky;
+      top: calc(var(--header-h) + 2rem);
+    }
+    
+    .page-header {
+      padding-top: calc(var(--header-h) + 2rem);
+    }
+
+    /* Cart Items Responsive Styling */
+    .cart-item {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      padding: 1.5rem 0;
+      border-bottom: 1px solid var(--clr-border);
+      align-items: center;
+      position: relative;
+    }
+    .cart-item__img {
+      width: 80px; height: 80px;
+      border-radius: var(--radius-md);
+      background: var(--clr-bg-2);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .cart-item__img img { width: 100%; height: 100%; object-fit: cover; }
+    .cart-item__info { flex: 1; min-width: 200px; }
+    .cart-item__sku { font-size: 0.75rem; color: var(--clr-text-4); margin-bottom: 0.25rem; }
+    .cart-item__title { font-size: 1rem; margin: 0 0 0.5rem 0; color: var(--clr-text-1); line-height: 1.3; }
+    .cart-item__price { color: var(--clr-orange); font-weight: 700; }
+    .cart-item__qty {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--clr-bg-3); border-radius: var(--radius-sm); padding: 0.25rem;
+    }
+    .cart-item__qty button {
+      width: 28px; height: 28px; border: none; background: transparent;
+      color: var(--clr-text-2); cursor: pointer; font-weight: bold;
+    }
+    .cart-item__qty span { width: 30px; text-align: center; font-size: 0.9rem; }
+    .cart-item__sum { width: 100px; text-align: right; font-weight: 700; color: var(--clr-text-1); }
+    .cart-item__del {
+      background: transparent; border: none; color: var(--clr-text-4);
+      cursor: pointer; padding: 0.5rem; transition: color 0.2s;
+    }
+    .cart-item__del:hover { color: #d32f2f; }
+
+    @media (max-width: 600px) {
+      .cart-item { gap: 1rem; padding-bottom: 2.5rem; }
+      .cart-item__info { min-width: 100%; }
+      .cart-item__sum { width: auto; flex: 1; text-align: left; font-size: 1.1rem; }
+      .cart-item__qty { margin-right: auto; }
+      .cart-item__del { position: absolute; top: 1.5rem; right: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════ HEADER -->
+<header class="header scrolled" id="mainHeader">
+  <div class="container">
+    <div class="header__inner">
+      <a href="index.html" class="header__logo" aria-label="Rhino Rescue — на главную">
+        <div class="header__logo-mark">RR</div>
+        <div class="header__logo-text">
+          <strong>Rhino Rescue</strong>
+          <span>Tactical Medicine</span>
+        </div>
+      </a>
+      <nav class="header__nav" aria-label="Основная навигация">
+        <a href="index.html">Главная</a>
+        <a href="catalog.html">Каталог</a>
+        <a href="delivery.html">Доставка</a>
+        <a href="payment.html">Оплата</a>
+        <a href="about.html">О нас</a>
+        <a href="contacts.html">Контакты</a>
+      </nav>
+
+      <div class="header__actions">
+        <a href="tel:+78001234567" class="header__phone">+7 (800) 123-45-67</a>
+        <button class="btn btn-primary btn-sm" data-modal="order">Заявка</button>
+        <a href="cart.html" class="header-cart" aria-label="Корзина" title="Корзина">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+          <span class="header-cart__badge" id="headerCartBadge" style="display: none;">0</span>
+        </a>
+        <button id="themeToggle" class="theme-toggle" aria-label="Переключить тему" title="Переключить тему">
+          <span class="icon-moon">🌙</span>
+          <span class="icon-sun">☀️</span>
+        </button>
+        <button class="burger" id="burgerBtn" aria-label="Меню" aria-expanded="false">
+          <span class="burger__line"></span>
+          <span class="burger__line"></span>
+          <span class="burger__line"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile menu -->
+<nav class="mobile-menu" id="mobileMenu" aria-label="Мобильное меню">
+  <a href="index.html">Главная</a>
+  <a href="catalog.html">Каталог</a>
+  <a href="delivery.html">Доставка</a>
+  <a href="payment.html">Оплата</a>
+  <a href="about.html">О нас</a>
+  <a href="contacts.html">Контакты</a>
+  <a href="cart.html">Корзина</a>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <nav class="breadcrumb">
+      <a href="index.html">Главная</a><span>/</span><strong>Корзина</strong>
+    </nav>
+    <h1 class="section-title">Корзина</h1>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ CART BODY -->
+<section class="cart-section">
+  <div class="container">
+    <div class="cart-layout">
+      <!-- ITEMS -->
+      <div class="cart-items" id="cartItemsContainer">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- CHECKOUT FORM -->
+      <div class="cart-checkout-box">
+        <h2 style="margin-top:0; margin-bottom:1.5rem; font-size:1.5rem;">Оформление заказа</h2>
+        
+        <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; font-size:1.1rem; font-weight:700;">
+          <span>Итого:</span>
+          <span id="cartTotalSum" style="color:var(--clr-orange);">0 ₽</span>
+        </div>
+
+        <div class="form-success" id="cartFormSuccess">
+          <div class="form-success__icon">✓</div>
+          <h3>Заказ успешно оформлен!</h3>
+          <p>Наш менеджер свяжется с вами в ближайшее время.</p>
+        </div>
+
+        <form id="cartForm" novalidate>
+          <input type="hidden" name="access_key" value="3d0e28bc-7458-4208-9a0d-4b917d608a79">
+          <input type="hidden" name="subject" value="Новый заказ из КОРЗИНЫ — Rhino Rescue">
+          <input type="hidden" name="product" id="formProduct" value="">
+          <input type="hidden" name="from_name" value="Rhino Rescue сайт">
+          <input type="checkbox" name="botcheck" style="display:none">
+
+          <div class="form-group">
+            <label class="form-label" for="cartName">Ваше имя <span>*</span></label>
+            <input class="form-input" type="text" id="cartName" name="name" placeholder="Иван Иванов" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cartPhone">Телефон <span>*</span></label>
+            <input class="form-input" type="tel" id="cartPhone" name="phone" placeholder="+7 (___) ___-__-__" required autocomplete="tel">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cartComment">Комментарий или адрес</label>
+            <textarea class="form-textarea" id="cartComment" name="message" placeholder="Напишите адрес доставки или вопрос..."></textarea>
+          </div>
+          <button class="btn btn-primary btn-full btn-lg" type="submit" id="cartSubmitBtn">
+            Оформить заказ
+          </button>
+          <label class="form-consent">
+            <input type="checkbox" name="privacy_consent" value="accepted" required>
+            <span>Нажимая кнопку, вы соглашаетесь с <a href="privacy.html" target="_blank" rel="noopener">условиями обработки персональных данных</a></span>
+          </label>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__inner">
+      <div class="footer__brand">
+        <div class="footer__logo">Rhino Rescue</div>
+        <p style="color:var(--clr-text-3);font-size:.875rem;margin-bottom:1.5rem">Надёжное тактическое медицинское снаряжение для сохранения жизней. Официальный партнёр.</p>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <p>© 2026 Rhino Rescue. Все права защищены.</p>
+    </div>
+  </div>
+</footer>
+
+<button class="scroll-top" id="scrollTop" aria-label="Наверх">↑</button>
+
+<script src="assets/js/cart.js"></script>
+<script src="assets/js/main.js"></script>
+
+<script>
+  // Add Web3Forms submission logic specific for cart form
+  const cartForm = document.getElementById('cartForm');
+  const cartSuccess = document.getElementById('cartFormSuccess');
+  if (cartForm) {
+    cartForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (cartForm.dataset.submitting === 'true') return;
+      const btn = document.getElementById('cartSubmitBtn');
+      const name = document.getElementById('cartName').value.trim();
+      const phone = document.getElementById('cartPhone').value.trim();
+
+      if (!name) { cartForm.querySelector('#cartName').focus(); return; }
+      if (!phone) { cartForm.querySelector('#cartPhone').focus(); return; }
+      if (!cartForm.reportValidity()) return;
+
+      btn.textContent = 'Отправка...';
+      btn.disabled = true;
+      cartForm.dataset.submitting = 'true';
+
+      try {
+        await window.submitLeadForm(cartForm);
+        cartForm.style.display = 'none';
+        cartSuccess.classList.add('show');
+        window.cart.clearCart();
+      } catch (err) {
+        console.error(err);
+        alert('Ошибка сети. Проверьте подключение и повторите попытку.');
+      } finally {
+        delete cartForm.dataset.submitting;
+        btn.textContent = 'Оформить заказ';
+        btn.disabled = false;
+      }
+    });
+  }
+</script>
+</body>
+</html>
