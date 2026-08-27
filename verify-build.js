@@ -112,6 +112,9 @@ if (!/Promise\.allSettled\(\[\s*sendOrderToBackend\(form, items\),\s*sendLeadToR
 if (!mainJs.includes("email: form.elements.email?.value || ''") || !mainJs.includes("roistatData.delete('email')")) {
   fail('assets/js/main.js: order email routing is incomplete');
 }
+if (!mainJs.includes('quantityGroup.hidden = !productId;') || !mainJs.includes('quantityInput.disabled = !productId;')) {
+  fail('assets/js/main.js: popup quantity mode switching is incomplete');
+}
 if (!mainJs.includes('if (!emailAccepted && !roistatAccepted)')) {
   fail('assets/js/main.js: SMTP-or-Roistat success semantics changed');
 }

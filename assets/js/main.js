@@ -352,9 +352,9 @@ function initOrderModal() {
               <label class="form-label" for="orderEmail">Email <span>*</span></label>
               <input class="form-input" type="email" id="orderEmail" name="email" placeholder="example@mail.ru" maxlength="255" autocomplete="email" disabled>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="orderQuantityGroup" hidden>
               <label class="form-label" for="orderQty">Количество</label>
-              <input class="form-input" type="number" id="orderQty" name="quantity" placeholder="1" min="1" max="9999">
+              <input class="form-input" type="number" id="orderQty" name="quantity" placeholder="1" min="1" max="9999" disabled>
               <span class="form-hint">Для оптовых цен — уточните количество</span>
             </div>
             <div class="form-group">
@@ -386,6 +386,7 @@ function initOrderModal() {
   const modalTitle = document.getElementById('orderModalTitle');
   const successTitle = document.getElementById('orderSuccessTitle');
   const successMessage = document.getElementById('orderSuccessMessage');
+  const quantityGroup = document.getElementById('orderQuantityGroup');
   const quantityInput = document.getElementById('orderQty');
   const submitButton = document.getElementById('orderModalSubmitBtn');
   const emailGroup = document.getElementById('orderEmailGroup');
@@ -407,6 +408,8 @@ function initOrderModal() {
     }
     productIdInput.value = productId;
     quantityInput.value = productId ? String(options.quantity || 1) : '';
+    quantityGroup.hidden = !productId;
+    quantityInput.disabled = !productId;
     quantityInput.required = Boolean(productId);
     emailGroup.hidden = !productId;
     emailInput.disabled = !productId;
