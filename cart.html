@@ -161,7 +161,6 @@
         </div>
 
         <form id="cartForm" novalidate>
-          <input type="hidden" name="access_key" value="3d0e28bc-7458-4208-9a0d-4b917d608a79">
           <input type="hidden" name="subject" value="Новый заказ из КОРЗИНЫ — Rhino Rescue">
           <input type="hidden" name="product" id="formProduct" value="">
           <input type="hidden" name="from_name" value="Rhino Rescue сайт">
@@ -218,7 +217,7 @@
 <script src="assets/js/main.js"></script>
 
 <script>
-  // Add Web3Forms submission logic specific for cart form
+  // Cart form submission
   const cartForm = document.getElementById('cartForm');
   const cartSuccess = document.getElementById('cartFormSuccess');
   if (cartForm) {

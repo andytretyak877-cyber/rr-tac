@@ -3,10 +3,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/moysklad.php';
+require_once __DIR__ . '/mailer.php';
 
-const RR_WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
-// Web3Forms access keys are public form identifiers and are already present in the site's HTML.
-const RR_WEB3FORMS_ACCESS_KEY = '3d0e28bc-7458-4208-9a0d-4b917d608a79';
 const RR_RATE_WINDOW_SECONDS = 600;
 const RR_RATE_MAX_REQUESTS = 5;
 
@@ -133,54 +131,21 @@ function rr_send_manager_order_email(array $order, bool $created, string $orderN
     $message .= 'Адрес доставки: ' . (($order['address'] ?? '') !== '' ? $order['address'] : 'не указан') . "\n";
     $message .= 'Комментарий: ' . (($order['comment'] ?? '') !== '' ? $order['comment'] : 'нет');
 
-    $fields = [
-        'access_key' => RR_WEB3FORMS_ACCESS_KEY,
+    $mail = [
         'subject' => $created ? 'Новый заказ сайта RR-TAC — ' . $orderName : 'ВНИМАНИЕ: заказ RR-TAC не создан в МойСклад',
-        'from_name' => 'Rhino Rescue сайт',
-        'name' => $order['name'] ?? '',
-        'phone' => $order['phone'] ?? '',
-        'message' => $message,
+        'body' => "Имя: " . ($order['name'] ?? '') . "\n"
+            . "Телефон: " . ($order['phone'] ?? '') . "\n\n"
+            . $message,
     ];
-    $body = http_build_query($fields, '', '&', PHP_QUERY_RFC3986);
-    $responseBody = false;
-    $statusCode = 0;
 
-    if (function_exists('curl_init')) {
-        $curl = curl_init(RR_WEB3FORMS_ENDPOINT);
-        curl_setopt_array($curl, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_TIMEOUT => 12,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded', 'Accept: application/json'],
-        ]);
-        $responseBody = curl_exec($curl);
-        $statusCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        curl_close($curl);
-    } else {
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: application/x-www-form-urlencoded\r\nAccept: application/json",
-                'content' => $body,
-                'timeout' => 12,
-                'ignore_errors' => true,
-            ],
-            'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
-        ]);
-        $responseBody = @file_get_contents(RR_WEB3FORMS_ENDPOINT, false, $context);
-        if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $match)) {
-            $statusCode = (int) $match[1];
-        }
-    }
-    if ($responseBody === false || $statusCode < 200 || $statusCode >= 300) {
-        error_log('RR-TAC order email failed with HTTP ' . $statusCode);
+    try {
+        $config = rr_load_mail_config();
+    } catch (Throwable $error) {
+        error_log('RR-TAC order email configuration unavailable');
         return false;
     }
-    $decoded = json_decode((string) $responseBody, true);
-    return is_array($decoded) && ($decoded['success'] ?? false) === true;
+
+    return rr_send_smtp_message($config, $mail);
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {

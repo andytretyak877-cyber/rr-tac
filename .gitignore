@@ -1,4 +1,5 @@
 /config/roistat.php
 /config/moysklad.php
+/config/mail.php
 /server-version/
 *.rar

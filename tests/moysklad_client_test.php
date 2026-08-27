@@ -27,4 +27,14 @@ $order['order_name'] = rr_make_order_name();
 $created = $client->createCustomerOrder($order, $context, $counterparty);
 
 if (($created['name'] ?? '') !== $order['order_name']) throw new RuntimeException('Fake API did not confirm the order');
+
+foreach (['missing-token', 'ambiguous-token', 'mismatch-token'] as $token) {
+    try {
+        $failingClient = new RrMoySkladClient($token, 'http://127.0.0.1:8766/api/remap/1.2');
+        $failingClient->resolveOrderContext('ИП Дадаева Евгения Алексеевна', 'Склад магазина', 'Новый');
+        throw new RuntimeException('Invalid RR-Tac sales channel result was accepted: ' . $token);
+    } catch (RrMoySkladException $expected) {
+    }
+}
+
 echo "MoySklad client contract test passed.\n";

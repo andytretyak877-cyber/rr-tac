@@ -39,9 +39,9 @@ function main() {
   run('generate-site.js');
   run('verify-build.js');
 
-  const forbiddenConfig = path.join(DIST, 'config', 'moysklad.php');
-  if (fs.existsSync(forbiddenConfig)) {
-    throw new Error('Refusing to publish: MoySklad server configuration was found in dist');
+  const forbiddenConfigs = ['moysklad.php', 'mail.php'].map(file => path.join(DIST, 'config', file));
+  if (forbiddenConfigs.some(file => fs.existsSync(file))) {
+    throw new Error('Refusing to publish: server configuration was found in dist');
   }
 
   fs.mkdirSync(PUBLISH_DIR, { recursive: true });

@@ -155,10 +155,20 @@ final class RrMoySkladClient
         ));
         if (count($matches) !== 1) throw new RrMoySkladException('Required customer order state is not unique');
 
+        $salesChannelName = 'RR-Tac';
+        $salesChannel = $this->uniqueRow('/entity/saleschannel', [
+            'filter' => 'name=' . $salesChannelName,
+            'limit' => 2,
+        ], $salesChannelName);
+        if (($salesChannel['name'] ?? null) !== $salesChannelName) {
+            throw new RrMoySkladException('MoySklad sales channel name did not match exactly');
+        }
+
         return [
             'organization' => $this->meta($organization),
             'store' => $this->meta($store),
             'state' => $this->meta($matches[0]),
+            'sales_channel' => $this->meta($salesChannel),
         ];
     }
 
@@ -312,6 +322,7 @@ function rr_build_customer_order_payload(array $order, array $context, array $co
         'organization' => ['meta' => $context['organization']],
         'store' => ['meta' => $context['store']],
         'state' => ['meta' => $context['state']],
+        'salesChannel' => ['meta' => $context['sales_channel']],
         'agent' => ['meta' => $counterpartyMeta],
         'positions' => $positions,
     ];

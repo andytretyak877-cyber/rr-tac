@@ -30,7 +30,9 @@ function fake_fail(string $message): void
     fake_respond(422, ['errors' => [['error' => $message]]]);
 }
 
-if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer test-token') fake_fail('Bearer token is missing');
+$authorization = (string) ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
+$allowedTokens = ['Bearer test-token', 'Bearer missing-token', 'Bearer ambiguous-token', 'Bearer mismatch-token'];
+if (!in_array($authorization, $allowedTokens, true)) fake_fail('Bearer token is missing');
 $acceptEncoding = trim((string) ($_SERVER['HTTP_ACCEPT_ENCODING'] ?? ''));
 if ($acceptEncoding !== 'gzip') fake_fail('Accept-Encoding: gzip is required');
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
@@ -54,6 +56,21 @@ if ($method === 'GET' && $path === '/api/remap/1.2/entity/store') {
 if ($method === 'GET' && $path === '/api/remap/1.2/entity/customerorder/metadata') {
     fake_respond(200, ['states' => [['name' => 'Новый', 'meta' => fake_meta('state', 'new')]]]);
 }
+if ($method === 'GET' && $path === '/api/remap/1.2/entity/saleschannel') {
+    if (($query['filter'] ?? '') !== 'name=RR-Tac') fake_fail('Sales channel filter is wrong');
+    if (($query['limit'] ?? '') !== '2') fake_fail('Sales channel ambiguity limit is wrong');
+    if ($authorization === 'Bearer missing-token') fake_respond(200, ['rows' => []]);
+    if ($authorization === 'Bearer ambiguous-token') {
+        fake_respond(200, ['rows' => [
+            ['name' => 'RR-Tac', 'meta' => fake_meta('saleschannel', 'rr-tac-1')],
+            ['name' => 'RR-Tac', 'meta' => fake_meta('saleschannel', 'rr-tac-2')],
+        ]]);
+    }
+    if ($authorization === 'Bearer mismatch-token') {
+        fake_respond(200, ['rows' => [['name' => 'RR-TAC', 'meta' => fake_meta('saleschannel', 'wrong-case')]]]);
+    }
+    fake_respond(200, ['rows' => [['name' => 'RR-Tac', 'meta' => fake_meta('saleschannel', 'rr-tac')]]]);
+}
 if ($method === 'GET' && $path === '/api/remap/1.2/entity/product') {
     $filter = (string) ($query['filter'] ?? '');
     if (!preg_match('/^article=(100|200)$/', $filter, $match)) fake_fail('Product must be searched by products.json sku');
@@ -74,6 +91,9 @@ if ($method === 'POST' && $path === '/api/remap/1.2/entity/customerorder') {
     if (($payload['organization']['meta']['type'] ?? '') !== 'organization') fake_fail('Organization meta is missing');
     if (($payload['store']['meta']['type'] ?? '') !== 'store') fake_fail('Store meta is missing');
     if (($payload['state']['meta']['type'] ?? '') !== 'state') fake_fail('State meta is missing');
+    if (($payload['salesChannel']['meta']['href'] ?? '') !== fake_meta('saleschannel', 'rr-tac')['href']) {
+        fake_fail('RR-Tac sales channel meta is missing');
+    }
     if (($payload['agent']['meta']['type'] ?? '') !== 'counterparty') fake_fail('Counterparty meta is missing');
     if (($payload['positions'][0]['price'] ?? null) !== 12345 || ($payload['positions'][0]['reserve'] ?? null) !== 2) {
         fake_fail('In-stock price or reserve is wrong');

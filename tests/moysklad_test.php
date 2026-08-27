@@ -37,6 +37,7 @@ $payload = rr_build_customer_order_payload($order, [
     'organization' => $meta('organization'),
     'store' => $meta('store'),
     'state' => $meta('state'),
+    'sales_channel' => $meta('saleschannel'),
 ], $meta('counterparty'));
 
 check($payload['name'] === $order['order_name'], 'Explicit order name is missing');
@@ -45,6 +46,7 @@ check($order['items'][0]['article'] === '100', 'MoySklad article was not taken f
 check($payload['positions'][0]['price'] === 12345, 'Rubles were not converted to kopecks');
 check($payload['positions'][0]['reserve'] === 2, 'In-stock position was not fully reserved');
 check($payload['positions'][1]['reserve'] === 0, 'Backorder position must not be reserved');
+check($payload['salesChannel']['meta'] === $meta('saleschannel'), 'RR-Tac sales channel meta is missing');
 check($payload['shipmentAddress'] === 'Москва, улица, 1', 'Delivery address is not separate');
 check($payload['description'] === 'Позвонить заранее', 'Comment is not separate');
 

@@ -103,14 +103,16 @@ async function sendLeadToRoistat(data) {
   return result;
 }
 
-async function sendLeadToWeb3Forms(data) {
-  const response = await fetch('https://api.web3forms.com/submit', {
+async function sendLeadToEmail(data) {
+  const response = await fetch('/assets/php/mail.php', {
     method: 'POST',
-    body: data
+    body: data,
+    credentials: 'same-origin',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
   });
-  const result = await response.json();
+  const result = await response.json().catch(() => ({}));
   if (!response.ok || !result.success) {
-    throw new Error(result.message || 'Web3Forms rejected the lead');
+    throw new Error(result.message || 'Email delivery failed');
   }
   return result;
 }
@@ -157,21 +159,21 @@ function reachLeadGoal() {
 }
 
 window.submitLeadForm = async function(form) {
-  const [web3FormsResult, roistatResult] = await Promise.allSettled([
-    sendLeadToWeb3Forms(new FormData(form)),
+  const [emailResult, roistatResult] = await Promise.allSettled([
+    sendLeadToEmail(new FormData(form)),
     sendLeadToRoistat(new FormData(form))
   ]);
-  const web3FormsAccepted = web3FormsResult.status === 'fulfilled';
+  const emailAccepted = emailResult.status === 'fulfilled';
   const roistatAccepted = roistatResult.status === 'fulfilled';
 
-  if (!web3FormsAccepted) console.error('Web3Forms error:', web3FormsResult.reason);
+  if (!emailAccepted) console.error('Email error:', emailResult.reason);
   if (!roistatAccepted) console.error('Roistat error:', roistatResult.reason);
-  if (!web3FormsAccepted && !roistatAccepted) {
+  if (!emailAccepted && !roistatAccepted) {
     throw new Error('Lead delivery failed');
   }
 
   reachLeadGoal();
-  return { success: true, web3FormsAccepted, roistatAccepted };
+  return { success: true, emailAccepted, roistatAccepted };
 };
 
 window.submitMoySkladOrder = async function(form, items) {
@@ -323,7 +325,6 @@ function initOrderModal() {
             <p id="orderSuccessMessage">Наш менеджер свяжется с вами в течение 30 минут в рабочее время.</p>
           </div>
           <form id="orderForm" novalidate>
-            <input type="hidden" name="access_key" value="3d0e28bc-7458-4208-9a0d-4b917d608a79">
             <input type="hidden" name="subject" id="formSubject" value="Новая заявка — Rhino Rescue">
             <input type="hidden" name="product" id="orderFormProduct" value="">
             <input type="hidden" name="product_id" id="orderFormProductId" value="">
@@ -443,7 +444,7 @@ function initOrderModal() {
     });
   });
 
-  /* Form submission via Web3Forms */
+  /* Form submission */
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();

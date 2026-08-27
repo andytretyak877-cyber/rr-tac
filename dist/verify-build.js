@@ -86,6 +86,8 @@ const mainJs = read(path.join('assets', 'js', 'main.js'));
 const sendPhp = read(path.join('assets', 'php', 'send.php'));
 const orderPhp = read(path.join('assets', 'php', 'order.php'));
 const moyskladPhp = read(path.join('assets', 'php', 'moysklad.php'));
+const mailPhp = read(path.join('assets', 'php', 'mail.php'));
+const mailerPhp = read(path.join('assets', 'php', 'mailer.php'));
 if ((mainJs.match(/reachGoal/g) || []).length !== 1 || !mainJs.includes("const LEAD_GOAL = 'qleads'")) {
   fail('assets/js/main.js: lead goal must be declared and sent exactly once');
 }
@@ -97,6 +99,24 @@ if (!sendPhp.includes('ROISTAT_INTEGRATION_KEY') || /test\.txt|file_put_contents
 }
 if (!mainJs.includes('/assets/php/order.php') || !mainJs.includes('submitMoySkladOrder')) {
   fail('assets/js/main.js: MoySklad order submission is missing');
+}
+if (!mainJs.includes('/assets/php/mail.php') || !mainJs.includes('sendLeadToEmail')) {
+  fail('assets/js/main.js: SMTP form submission is missing');
+}
+if (!/Promise\.allSettled\(\[\s*sendLeadToEmail\(new FormData\(form\)\),\s*sendLeadToRoistat\(new FormData\(form\)\)\s*\]\)/.test(mainJs)) {
+  fail('assets/js/main.js: lead transports must remain email first and Roistat second');
+}
+if (!/Promise\.allSettled\(\[\s*sendOrderToBackend\(form, items\),\s*sendLeadToRoistat\(new FormData\(form\)\)\s*\]\)/.test(mainJs)) {
+  fail('assets/js/main.js: order backend and Roistat call order changed');
+}
+if (!mainJs.includes('if (!emailAccepted && !roistatAccepted)')) {
+  fail('assets/js/main.js: SMTP-or-Roistat success semantics changed');
+}
+if (!mailPhp.includes("require_once __DIR__ . '/mailer.php'") || !mailerPhp.includes('RR_MAIL_CONFIG_PATH')) {
+  fail('assets/php: isolated SMTP endpoint or external configuration lookup is missing');
+}
+if (!mailerPhp.includes('PHPMailer::ENCRYPTION_SMTPS') || !mailerPhp.includes('$mailer->Port = $config')) {
+  fail('assets/php/mailer.php: PHPMailer SMTPS configuration is incomplete');
 }
 if (!orderPhp.includes('Заказ в МойСклад НЕ создан') || !orderPhp.includes('rr_rate_limit')) {
   fail('assets/php/order.php: manager notification or backend rate limit is missing');
@@ -112,6 +132,12 @@ if (!moyskladPhp.includes("$product['id']") || !moyskladPhp.includes("$product['
 }
 if (fs.existsSync(path.join(dist, 'config', 'moysklad.php'))) {
   fail('dist must not contain config/moysklad.php');
+}
+if (fs.existsSync(path.join(dist, 'config', 'mail.php'))) {
+  fail('dist must not contain config/mail.php');
+}
+if (!fs.existsSync(path.join(dist, 'assets', 'php', 'vendor', 'phpmailer', 'src', 'PHPMailer.php'))) {
+  fail('dist must contain the PHPMailer runtime');
 }
 const cartHtml = read(path.join('cart', 'index.html'));
 if (!cartHtml.includes('name="address"') || !cartHtml.includes('id="cartComment"')) {
@@ -157,6 +183,11 @@ for (const htmlFile of walk(dist).filter(file => file.endsWith('.html'))) {
 for (const file of walk(dist).filter(file => /\.(?:php|js|json|html)$/i.test(file))) {
   const content = fs.readFileSync(file, 'utf8');
   const relativePath = path.relative(dist, file);
+  const removedProvider = ['web3', 'forms'].join('');
+  const removedKey = ['access', 'key'].join('_');
+  if (content.toLowerCase().includes(removedProvider) || content.toLowerCase().includes(removedKey)) {
+    fail(`${relativePath}: removed email transport remains`);
+  }
   if (/Authorization:\s*Bearer\s+[A-Za-z0-9._-]{20,}/i.test(content)) {
     fail(`${relativePath}: embedded Bearer token detected`);
   }
