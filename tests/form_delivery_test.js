@@ -18,12 +18,26 @@ function extract(startMarker, endMarker) {
 const leadSource = extract('window.submitLeadForm = async function(form)', 'window.submitMoySkladOrder = async function(form, items)');
 const orderSource = extract('window.submitMoySkladOrder = async function(form, items)', "document.addEventListener('DOMContentLoaded'");
 
+class MockFormData {
+  constructor(form) {
+    this.values = new Map(Object.entries(form?.fields || {}));
+  }
+
+  delete(name) {
+    this.values.delete(name);
+  }
+
+  has(name) {
+    return this.values.has(name);
+  }
+}
+
 async function runLeadCase(emailSucceeds, roistatSucceeds) {
   const calls = [];
   let goals = 0;
   const context = {
     window: {},
-    FormData: class FormData {},
+    FormData: MockFormData,
     console: { error() {} },
     sendLeadToEmail() {
       calls.push('email');
@@ -52,16 +66,18 @@ async function runLeadCase(emailSucceeds, roistatSucceeds) {
 async function runOrderCase(orderSucceeds, roistatSucceeds) {
   const calls = [];
   let goals = 0;
+  let roistatHasEmail = null;
   const context = {
     window: {},
-    FormData: class FormData {},
+    FormData: MockFormData,
     console: { error() {} },
     sendOrderToBackend() {
       calls.push('order');
       return orderSucceeds ? Promise.resolve({ success: true, order_created: true }) : Promise.reject(new Error('order failed'));
     },
-    sendLeadToRoistat() {
+    sendLeadToRoistat(data) {
       calls.push('roistat');
+      roistatHasEmail = data.has('email');
       return roistatSucceeds ? Promise.resolve({ success: true }) : Promise.reject(new Error('roistat failed'));
     },
     reachLeadGoal() {
@@ -73,11 +89,11 @@ async function runOrderCase(orderSucceeds, roistatSucceeds) {
   let result;
   let error;
   try {
-    result = await context.window.submitMoySkladOrder({}, [{ id: 'rr-test', quantity: 1 }]);
+    result = await context.window.submitMoySkladOrder({ fields: { name: 'Иван', email: 'customer@example.com' } }, [{ id: 'rr-test', quantity: 1 }]);
   } catch (caught) {
     error = caught;
   }
-  return { calls, goals, result, error };
+  return { calls, goals, result, error, roistatHasEmail };
 }
 
 (async () => {
@@ -96,6 +112,7 @@ async function runOrderCase(orderSucceeds, roistatSucceeds) {
 
   const successfulOrder = await runOrderCase(true, false);
   check(successfulOrder.calls.join(',') === 'order,roistat', 'Order/Roistat call order changed');
+  check(successfulOrder.roistatHasEmail === false, 'Order email leaked into Roistat payload');
   check(Boolean(successfulOrder.result) && !successfulOrder.error, 'Roistat failure cancelled a confirmed order');
   check(successfulOrder.goals === 1, 'Confirmed order did not trigger qleads');
 

@@ -134,7 +134,8 @@ function rr_send_manager_order_email(array $order, bool $created, string $orderN
     $mail = [
         'subject' => $created ? 'Новый заказ сайта RR-TAC — ' . $orderName : 'ВНИМАНИЕ: заказ RR-TAC не создан в МойСклад',
         'body' => "Имя: " . ($order['name'] ?? '') . "\n"
-            . "Телефон: " . ($order['phone'] ?? '') . "\n\n"
+            . "Телефон: " . ($order['phone'] ?? '') . "\n"
+            . "Email: " . ($order['email'] ?? '') . "\n\n"
             . $message,
     ];
 
@@ -184,6 +185,7 @@ try {
 $order = [
     'name' => rr_limit_text($payload['name'] ?? '', 120),
     'phone' => rr_limit_text($payload['phone'] ?? '', 40),
+    'email' => rr_limit_text($payload['email'] ?? '', 255),
     'address' => rr_limit_text($payload['address'] ?? '', 500),
     'comment' => rr_limit_text($payload['comment'] ?? '', 2000),
     'items' => is_array($payload['items'] ?? null) ? $payload['items'] : [],
@@ -207,7 +209,7 @@ try {
     );
     $order['items'] = $client->resolveProducts($order['items']);
 
-    $counterpartyMeta = $client->createIndividualCounterparty($order['name'], $order['phone']);
+    $counterpartyMeta = $client->createIndividualCounterparty($order['name'], $order['phone'], $order['email']);
     $counterpartyCreated = true;
     $orderName = rr_make_order_name();
     $order['order_name'] = $orderName;

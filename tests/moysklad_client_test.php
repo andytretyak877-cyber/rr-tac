@@ -11,6 +11,7 @@ $products = [
 $order = rr_validate_order([
     'name' => 'Иван Иванов',
     'phone' => '+7 (999) 123-45-67',
+    'email' => 'customer@example.com',
     'address' => 'Москва, улица, 1',
     'comment' => 'Позвонить заранее',
     'items' => [
@@ -22,7 +23,7 @@ $order = rr_validate_order([
 $client = new RrMoySkladClient('test-token', 'http://127.0.0.1:8766/api/remap/1.2');
 $context = $client->resolveOrderContext('ИП Дадаева Евгения Алексеевна', 'Склад магазина', 'Новый');
 $order['items'] = $client->resolveProducts($order['items']);
-$counterparty = $client->createIndividualCounterparty($order['name'], $order['phone']);
+$counterparty = $client->createIndividualCounterparty($order['name'], $order['phone'], $order['email']);
 $order['order_name'] = rr_make_order_name();
 $created = $client->createCustomerOrder($order, $context, $counterparty);
 

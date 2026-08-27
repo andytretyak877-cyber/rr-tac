@@ -106,8 +106,11 @@ if (!mainJs.includes('/assets/php/mail.php') || !mainJs.includes('sendLeadToEmai
 if (!/Promise\.allSettled\(\[\s*sendLeadToEmail\(new FormData\(form\)\),\s*sendLeadToRoistat\(new FormData\(form\)\)\s*\]\)/.test(mainJs)) {
   fail('assets/js/main.js: lead transports must remain email first and Roistat second');
 }
-if (!/Promise\.allSettled\(\[\s*sendOrderToBackend\(form, items\),\s*sendLeadToRoistat\(new FormData\(form\)\)\s*\]\)/.test(mainJs)) {
+if (!/Promise\.allSettled\(\[\s*sendOrderToBackend\(form, items\),\s*sendLeadToRoistat\(roistatData\)\s*\]\)/.test(mainJs)) {
   fail('assets/js/main.js: order backend and Roistat call order changed');
+}
+if (!mainJs.includes("email: form.elements.email?.value || ''") || !mainJs.includes("roistatData.delete('email')")) {
+  fail('assets/js/main.js: order email routing is incomplete');
 }
 if (!mainJs.includes('if (!emailAccepted && !roistatAccepted)')) {
   fail('assets/js/main.js: SMTP-or-Roistat success semantics changed');
@@ -121,11 +124,17 @@ if (!mailerPhp.includes('PHPMailer::ENCRYPTION_SMTPS') || !mailerPhp.includes('$
 if (!orderPhp.includes('Заказ в МойСклад НЕ создан') || !orderPhp.includes('rr_rate_limit')) {
   fail('assets/php/order.php: manager notification or backend rate limit is missing');
 }
+if (!orderPhp.includes('. "Email: " . ($order[\'email\'] ?? \'\')')) {
+  fail('assets/php/order.php: manager order email is missing customer email');
+}
 if (!orderPhp.includes('if ($orderCreated)') || orderPhp.includes('if ($orderCreated || $managerMailSent)')) {
   fail('assets/php/order.php: buyer success must require a confirmed MoySklad order');
 }
 if (!moyskladPhp.includes("'reserve'") || !moyskladPhp.includes("'price'")) {
   fail('assets/php/moysklad.php: position price or reserve is missing');
+}
+if (!moyskladPhp.includes("'email' => $email") || !moyskladPhp.includes('FILTER_VALIDATE_EMAIL')) {
+  fail('assets/php/moysklad.php: required counterparty email is incomplete');
 }
 if (!moyskladPhp.includes("$product['id']") || !moyskladPhp.includes("$product['sku']") || !moyskladPhp.includes("'filter' => 'article=' . $item['article']")) {
   fail('assets/php/moysklad.php: id-to-sku-to-MoySklad mapping is incomplete');
@@ -142,6 +151,9 @@ if (!fs.existsSync(path.join(dist, 'assets', 'php', 'vendor', 'phpmailer', 'src'
 const cartHtml = read(path.join('cart', 'index.html'));
 if (!cartHtml.includes('name="address"') || !cartHtml.includes('id="cartComment"')) {
   fail('cart/index.html: delivery address and comment must be separate');
+}
+if (!/<input[^>]*type="email"[^>]*id="cartEmail"[^>]*name="email"[^>]*required/.test(cartHtml)) {
+  fail('cart/index.html: required order email is missing');
 }
 
 for (const htmlFile of walk(dist).filter(file => file.endsWith('.html'))) {

@@ -131,6 +131,7 @@ async function sendOrderToBackend(form, items) {
     website: form.elements.website?.value || '',
     name: form.elements.name?.value || '',
     phone: form.elements.phone?.value || '',
+    email: form.elements.email?.value || '',
     address: form.elements.address?.value || '',
     comment: form.elements.message?.value || '',
     items: items.map(item => ({ id: String(item.id), quantity: item.quantity }))
@@ -177,9 +178,11 @@ window.submitLeadForm = async function(form) {
 };
 
 window.submitMoySkladOrder = async function(form, items) {
+  const roistatData = new FormData(form);
+  roistatData.delete('email');
   const [orderResult, roistatResult] = await Promise.allSettled([
     sendOrderToBackend(form, items),
-    sendLeadToRoistat(new FormData(form))
+    sendLeadToRoistat(roistatData)
   ]);
   if (roistatResult.status === 'rejected') console.error('Roistat error:', roistatResult.reason);
   if (orderResult.status === 'rejected') throw orderResult.reason;
@@ -345,6 +348,10 @@ function initOrderModal() {
               <label class="form-label" for="orderPhone">Телефон <span>*</span></label>
               <input class="form-input" type="tel" id="orderPhone" name="phone" placeholder="+7 (___) ___-__-__" required autocomplete="tel">
             </div>
+            <div class="form-group" id="orderEmailGroup" hidden>
+              <label class="form-label" for="orderEmail">Email <span>*</span></label>
+              <input class="form-input" type="email" id="orderEmail" name="email" placeholder="example@mail.ru" maxlength="255" autocomplete="email" disabled>
+            </div>
             <div class="form-group">
               <label class="form-label" for="orderQty">Количество</label>
               <input class="form-input" type="number" id="orderQty" name="quantity" placeholder="1" min="1" max="9999">
@@ -381,6 +388,8 @@ function initOrderModal() {
   const successMessage = document.getElementById('orderSuccessMessage');
   const quantityInput = document.getElementById('orderQty');
   const submitButton = document.getElementById('orderModalSubmitBtn');
+  const emailGroup = document.getElementById('orderEmailGroup');
+  const emailInput = document.getElementById('orderEmail');
 
   // Open modal
   window.openOrderModal = (productTitle = '', options = {}) => {
@@ -399,6 +408,10 @@ function initOrderModal() {
     productIdInput.value = productId;
     quantityInput.value = productId ? String(options.quantity || 1) : '';
     quantityInput.required = Boolean(productId);
+    emailGroup.hidden = !productId;
+    emailInput.disabled = !productId;
+    emailInput.required = Boolean(productId);
+    if (!productId) emailInput.value = '';
     modalTitle.textContent = productId ? 'Оформить заказ' : 'Оставить заявку';
     submitButton.textContent = productId ? 'Оформить заказ' : 'Отправить заявку';
     successTitle.textContent = productId ? 'Заказ принят!' : 'Заявка принята!';

@@ -54,9 +54,14 @@ function rr_validate_order(array $payload, array $products): array
 {
     $name = rr_limit_text($payload['name'] ?? '', 120);
     $phone = rr_limit_text($payload['phone'] ?? '', 40);
+    $emailValue = is_scalar($payload['email'] ?? null) ? trim((string) $payload['email']) : '';
+    $email = rr_limit_text($emailValue, 255);
     $phoneDigits = preg_replace('/\D+/', '', $phone) ?: '';
     if ($name === '' || strlen($name) < 2 || strlen($phoneDigits) !== 11) {
         throw new InvalidArgumentException('Укажите имя и полный номер телефона');
+    }
+    if ($email === '' || strlen($emailValue) > 255 || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+        throw new InvalidArgumentException('Укажите корректный email');
     }
 
     $address = rr_limit_text($payload['address'] ?? '', 500);
@@ -127,6 +132,7 @@ function rr_validate_order(array $payload, array $products): array
     return [
         'name' => $name,
         'phone' => $phone,
+        'email' => $email,
         'address' => $address,
         'comment' => $comment,
         'items' => $validated,
@@ -189,11 +195,12 @@ final class RrMoySkladClient
         return $resolved;
     }
 
-    public function createIndividualCounterparty(string $name, string $phone): array
+    public function createIndividualCounterparty(string $name, string $phone, string $email): array
     {
         $counterparty = $this->request('POST', '/entity/counterparty', [], [
             'name' => $name,
             'phone' => $phone,
+            'email' => $email,
             'companyType' => 'individual',
         ]);
         return $this->meta($counterparty);

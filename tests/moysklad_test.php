@@ -17,6 +17,7 @@ $products = [
 $order = rr_validate_order([
     'name' => 'Иван Иванов',
     'phone' => '+7 (999) 123-45-67',
+    'email' => 'customer@example.com',
     'address' => 'Москва, улица, 1',
     'comment' => 'Позвонить заранее',
     'items' => [
@@ -41,6 +42,7 @@ $payload = rr_build_customer_order_payload($order, [
 ], $meta('counterparty'));
 
 check($payload['name'] === $order['order_name'], 'Explicit order name is missing');
+check($order['email'] === 'customer@example.com', 'Validated order email is missing');
 check($order['items'][0]['id'] === 'rr-100', 'Browser product id was not preserved');
 check($order['items'][0]['article'] === '100', 'MoySklad article was not taken from products.json sku');
 check($payload['positions'][0]['price'] === 12345, 'Rubles were not converted to kopecks');
@@ -54,6 +56,7 @@ try {
     rr_validate_order([
         'name' => 'Иван Иванов',
         'phone' => '+7 (999) 123-45-67',
+        'email' => 'customer@example.com',
         'items' => [['id' => 'missing', 'quantity' => 1]],
     ], $products);
     throw new RuntimeException('Missing site product was accepted');
@@ -64,10 +67,24 @@ try {
     rr_validate_order([
         'name' => 'Иван Иванов',
         'phone' => '+7 (999) 123-45-67',
+        'email' => 'customer@example.com',
         'items' => [['id' => 'rr-100', 'quantity' => 0]],
     ], $products);
     throw new RuntimeException('Zero quantity was accepted');
 } catch (InvalidArgumentException $expected) {
+}
+
+foreach (['', 'not-an-email'] as $invalidEmail) {
+    try {
+        rr_validate_order([
+            'name' => 'Иван Иванов',
+            'phone' => '+7 (999) 123-45-67',
+            'email' => $invalidEmail,
+            'items' => [['id' => 'rr-100', 'quantity' => 1]],
+        ], $products);
+        throw new RuntimeException('Missing or invalid email was accepted');
+    } catch (InvalidArgumentException $expected) {
+    }
 }
 
 check(strpos(rr_make_order_name(), 'rrtac-') === 0, 'Order prefix is invalid');

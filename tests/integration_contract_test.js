@@ -26,7 +26,11 @@ check(sendHash === '6cab14049cee755490752ebf68d0027af43eef6835fa3c71de65e9fbf5bc
 
 const mainJs = read('assets/js/main.js');
 check(/Promise\.allSettled\(\[\s*sendLeadToEmail\(new FormData\(form\)\),\s*sendLeadToRoistat\(new FormData\(form\)\)\s*\]\)/.test(mainJs), 'Lead transport order must remain email first, Roistat second');
-check(/Promise\.allSettled\(\[\s*sendOrderToBackend\(form, items\),\s*sendLeadToRoistat\(new FormData\(form\)\)\s*\]\)/.test(mainJs), 'Order transport order must remain backend first, Roistat second');
+check(/Promise\.allSettled\(\[\s*sendOrderToBackend\(form, items\),\s*sendLeadToRoistat\(roistatData\)\s*\]\)/.test(mainJs), 'Order transport order must remain backend first, Roistat second');
+check(mainJs.includes("email: form.elements.email?.value || ''"), 'Order JSON does not include email');
+check(mainJs.includes("const roistatData = new FormData(form);\n  roistatData.delete('email');"), 'Order email must be removed from the Roistat FormData copy');
+check(/<input[^>]*type="email"[^>]*id="orderEmail"[^>]*name="email"[^>]*disabled/.test(mainJs), 'One-click email input must start disabled for ordinary leads');
+check(mainJs.includes('emailInput.disabled = !productId;') && mainJs.includes('emailInput.required = Boolean(productId);'), 'One-click email must only be required in product order mode');
 check(mainJs.includes("const LEAD_GOAL = 'qleads'"), 'Lead goal changed');
 check((mainJs.match(/reachGoal/g) || []).length === 1, 'Lead goal must be sent exactly once');
 check(mainJs.includes('if (!emailAccepted && !roistatAccepted)'), 'Lead success must require SMTP or Roistat');
@@ -37,6 +41,14 @@ const orderSuccess = orderPhp.indexOf('if ($orderCreated)', mailAttempt);
 check(mailAttempt !== -1 && orderSuccess > mailAttempt, 'Manager email must be attempted before the final MoySklad result');
 check(orderPhp.includes("'success' => true,\n        'order_created' => true"), 'Confirmed MoySklad order success response changed');
 check(!orderPhp.includes('if ($orderCreated || $managerMailSent)'), 'SMTP success must not replace a confirmed MoySklad order');
+check(orderPhp.includes('. "Email: " . ($order[\'email\'] ?? \'\') . "\\n\\n"'), 'Manager order email does not contain customer email');
+
+const moyskladPhp = read('assets/php/moysklad.php');
+check(moyskladPhp.includes('createIndividualCounterparty(string $name, string $phone, string $email)'), 'MoySklad counterparty method does not accept email');
+check(moyskladPhp.includes("'email' => $email"), 'MoySklad counterparty payload does not contain email');
+
+const cartHtml = read('cart.html');
+check(/<input[^>]*type="email"[^>]*id="cartEmail"[^>]*name="email"[^>]*required/.test(cartHtml), 'Cart email must be required');
 
 const forbiddenProvider = ['web3', 'forms'].join('');
 const forbiddenKey = ['access', 'key'].join('_');

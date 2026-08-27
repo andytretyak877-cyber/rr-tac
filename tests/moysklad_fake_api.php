@@ -80,6 +80,7 @@ if ($method === 'GET' && $path === '/api/remap/1.2/entity/product') {
 if ($method === 'POST' && $path === '/api/remap/1.2/entity/counterparty') {
     if (($payload['name'] ?? '') !== 'Иван Иванов') fake_fail('Counterparty name is wrong');
     if (($payload['phone'] ?? '') !== '+7 (999) 123-45-67') fake_fail('Counterparty phone is wrong');
+    if (($payload['email'] ?? '') !== 'customer@example.com') fake_fail('Counterparty email is wrong');
     if (($payload['companyType'] ?? '') !== 'individual') fake_fail('Counterparty is not an individual');
     fake_respond(200, ['name' => $payload['name'], 'meta' => fake_meta('counterparty', 'buyer')]);
 }
