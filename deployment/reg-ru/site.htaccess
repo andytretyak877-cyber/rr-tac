@@ -1,0 +1,48 @@
+# REG.RU / ISPmanager: copy to the document root as .htaccess.
+# Apache 2.4 + mod_rewrite + mod_authz_core + mod_php (php_module).
+# This file is effective ONLY after AllowOverride permits these directives.
+# Nginx serves static files itself: install site-security.nginx.conf as well.
+
+Options -Indexes -MultiViews
+DirectoryIndex disabled
+DirectoryIndex index.html
+AcceptPathInfo Off
+AddDefaultCharset UTF-8
+
+RewriteEngine On
+
+# Keep a future ACME HTTP challenge working, without allowing arbitrary dotfiles.
+RewriteRule ^\.well-known/acme-challenge/[A-Za-z0-9_-]+$ - [END]
+RewriteRule (^|/)\. - [F,END]
+
+# These are never public resources, including files beneath these directories.
+RewriteRule (^|/)(config|vendor|backups|dist|server-version|tests|deployment)(/|$) - [F,END,NC]
+RewriteRule ^(update-site|sync-products|csv-to-json|generate-site|verify-build)\.js$ - [F,END,NC]
+RewriteRule \.(env|ini|log|sql|bak|old|orig|swp|md|csv|rar|zip|tar|gz)(/|$) - [F,END,NC]
+
+# Only these exact, physical PHP entry points may receive HTTP requests.
+RewriteRule ^assets/php/(send|mail|order)\.php$ - [END]
+# Also reject PHP source copies and PATH_INFO, e.g. mailer.php.txt / mail.php/x.
+RewriteRule \.(php[0-9]*|phtml|phar|phps)([/.]|$) - [F,END,NC]
+
+# Clean URLs are actual folders containing index.html; no PHP/front-controller
+# rewrite and no HTTPS redirect are required here.
+
+# Fail closed if mod_php disappears instead of returning PHP source as text.
+<IfModule !php_module>
+    <FilesMatch "(?i)\.(php[0-9]*|phtml|phar|phps)([.]|$)">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+<IfModule php_module>
+    php_flag engine On
+    php_flag display_errors Off
+    php_flag log_errors On
+</IfModule>
+
+<IfModule headers_module>
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>

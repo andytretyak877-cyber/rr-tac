@@ -43,6 +43,7 @@ $payload = rr_build_customer_order_payload($order, [
 
 check($payload['name'] === $order['order_name'], 'Explicit order name is missing');
 check($order['email'] === 'customer@example.com', 'Validated order email is missing');
+check($order['comment'] === 'Позвонить заранее', 'Validated order comment is missing');
 check($order['items'][0]['id'] === 'rr-100', 'Browser product id was not preserved');
 check($order['items'][0]['article'] === '100', 'MoySklad article was not taken from products.json sku');
 check($payload['positions'][0]['price'] === 12345, 'Rubles were not converted to kopecks');
@@ -50,7 +51,9 @@ check($payload['positions'][0]['reserve'] === 2, 'In-stock position was not full
 check($payload['positions'][1]['reserve'] === 0, 'Backorder position must not be reserved');
 check($payload['salesChannel']['meta'] === $meta('saleschannel'), 'RR-Tac sales channel meta is missing');
 check($payload['shipmentAddress'] === 'Москва, улица, 1', 'Delivery address is not separate');
-check($payload['description'] === 'Позвонить заранее', 'Comment is not separate');
+check($payload['shipmentAddressFull']['addInfo'] === 'Москва, улица, 1', 'Full delivery address is wrong');
+check($payload['shipmentAddressFull']['comment'] === 'Позвонить заранее', 'Delivery comment is wrong');
+check(!array_key_exists('description', $payload), 'Comment was duplicated in description');
 
 try {
     rr_validate_order([

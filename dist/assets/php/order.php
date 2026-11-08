@@ -128,7 +128,7 @@ function rr_send_manager_order_email(array $order, bool $created, string $orderN
     $message = $status . "\n\n";
     if (!$created && $failureNote !== '') $message .= 'Причина для менеджера: ' . $failureNote . "\n\n";
     $message .= "ТОВАРЫ:\n" . rr_manager_items_text($order['items'] ?? []) . "\n\n";
-    $message .= 'Адрес доставки: ' . (($order['address'] ?? '') !== '' ? $order['address'] : 'не указан') . "\n";
+    if (($order['address'] ?? '') !== '') $message .= 'Адрес доставки: ' . $order['address'] . "\n";
     $message .= 'Комментарий: ' . (($order['comment'] ?? '') !== '' ? $order['comment'] : 'нет');
 
     $mail = [

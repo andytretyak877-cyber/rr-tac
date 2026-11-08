@@ -29,11 +29,9 @@ check(/Promise\.allSettled\(\[\s*sendLeadToEmail\(new FormData\(form\)\),\s*send
 check(/Promise\.allSettled\(\[\s*sendOrderToBackend\(form, items\),\s*sendLeadToRoistat\(roistatData\)\s*\]\)/.test(mainJs), 'Order transport order must remain backend first, Roistat second');
 check(mainJs.includes("email: form.elements.email?.value || ''"), 'Order JSON does not include email');
 check(mainJs.includes("const roistatData = new FormData(form);\n  roistatData.delete('email');"), 'Order email must be removed from the Roistat FormData copy');
-check(/<input[^>]*type="email"[^>]*id="orderEmail"[^>]*name="email"[^>]*disabled/.test(mainJs), 'One-click email input must start disabled for ordinary leads');
-check(mainJs.includes('emailInput.disabled = !productId;') && mainJs.includes('emailInput.required = Boolean(productId);'), 'One-click email must only be required in product order mode');
-check(/id="orderQuantityGroup"[^>]*hidden/.test(mainJs), 'Quantity group must start hidden for ordinary leads');
-check(/id="orderQty"[^>]*disabled/.test(mainJs), 'Quantity input must start disabled for ordinary leads');
-check(mainJs.includes('quantityGroup.hidden = !productId;') && mainJs.includes('quantityInput.disabled = !productId;'), 'Quantity must only be visible and enabled in product order mode');
+check(/<input[^>]*type="email"[^>]*id="orderEmail"[^>]*name="email"[^>]*required/.test(mainJs), 'Popup email must be required');
+check(!/id="orderEmailGroup"[^>]*hidden|id="orderEmail"[^>]*disabled/.test(mainJs), 'Popup email must always be visible and enabled');
+check(!/id="orderQuantityGroup"[^>]*hidden|id="orderQty"[^>]*disabled/.test(mainJs), 'Popup quantity must always be visible and enabled');
 check(mainJs.includes("const LEAD_GOAL = 'qleads'"), 'Lead goal changed');
 check((mainJs.match(/reachGoal/g) || []).length === 1, 'Lead goal must be sent exactly once');
 check(mainJs.includes('if (!emailAccepted && !roistatAccepted)'), 'Lead success must require SMTP or Roistat');

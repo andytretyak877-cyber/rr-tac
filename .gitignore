@@ -3,3 +3,6 @@
 /config/mail.php
 /server-version/
 *.rar
+/.reg-ru-known_hosts
+/deployment/reg-ru/*.zip
+/backups/feed-check-20261107/

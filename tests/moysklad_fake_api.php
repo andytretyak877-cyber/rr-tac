@@ -88,7 +88,9 @@ if ($method === 'POST' && $path === '/api/remap/1.2/entity/customerorder') {
     if (!str_starts_with((string) ($payload['name'] ?? ''), 'rrtac-')) fake_fail('Order prefix is wrong');
     if (($payload['externalCode'] ?? '') !== $payload['name']) fake_fail('External code is not collision-safe order name');
     if (($payload['shipmentAddress'] ?? '') !== 'Москва, улица, 1') fake_fail('Shipment address is wrong');
-    if (($payload['description'] ?? '') !== 'Позвонить заранее') fake_fail('Description is wrong');
+    if (($payload['shipmentAddressFull']['addInfo'] ?? '') !== 'Москва, улица, 1') fake_fail('Full shipment address is wrong');
+    if (($payload['shipmentAddressFull']['comment'] ?? '') !== 'Позвонить заранее') fake_fail('Shipment comment is wrong');
+    if (array_key_exists('description', $payload)) fake_fail('Comment must not be duplicated in description');
     if (($payload['organization']['meta']['type'] ?? '') !== 'organization') fake_fail('Organization meta is missing');
     if (($payload['store']['meta']['type'] ?? '') !== 'store') fake_fail('Store meta is missing');
     if (($payload['state']['meta']['type'] ?? '') !== 'state') fake_fail('State meta is missing');
@@ -102,7 +104,11 @@ if ($method === 'POST' && $path === '/api/remap/1.2/entity/customerorder') {
     if (($payload['positions'][1]['price'] ?? null) !== 5000 || ($payload['positions'][1]['reserve'] ?? null) !== 0) {
         fake_fail('Backorder price or reserve is wrong');
     }
-    fake_respond(200, ['name' => $payload['name'], 'meta' => fake_meta('customerorder', 'order')]);
+    fake_respond(200, [
+        'name' => $payload['name'],
+        'shipmentAddressFull' => $payload['shipmentAddressFull'],
+        'meta' => fake_meta('customerorder', 'order'),
+    ]);
 }
 
 fake_respond(404, ['errors' => [['error' => 'Unknown fake endpoint']]]);

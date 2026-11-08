@@ -28,6 +28,7 @@ $order['order_name'] = rr_make_order_name();
 $created = $client->createCustomerOrder($order, $context, $counterparty);
 
 if (($created['name'] ?? '') !== $order['order_name']) throw new RuntimeException('Fake API did not confirm the order');
+if (($created['shipmentAddressFull']['comment'] ?? '') !== $order['comment']) throw new RuntimeException('Fake API did not receive the order comment');
 
 foreach (['missing-token', 'ambiguous-token', 'mismatch-token'] as $token) {
     try {

@@ -348,18 +348,18 @@ function initOrderModal() {
               <label class="form-label" for="orderPhone">Телефон <span>*</span></label>
               <input class="form-input" type="tel" id="orderPhone" name="phone" placeholder="+7 (___) ___-__-__" required autocomplete="tel">
             </div>
-            <div class="form-group" id="orderEmailGroup" hidden>
+            <div class="form-group" id="orderEmailGroup">
               <label class="form-label" for="orderEmail">Email <span>*</span></label>
-              <input class="form-input" type="email" id="orderEmail" name="email" placeholder="example@mail.ru" maxlength="255" autocomplete="email" disabled>
+              <input class="form-input" type="email" id="orderEmail" name="email" placeholder="example@mail.ru" maxlength="255" required autocomplete="email">
             </div>
-            <div class="form-group" id="orderQuantityGroup" hidden>
+            <div class="form-group" id="orderQuantityGroup">
               <label class="form-label" for="orderQty">Количество</label>
-              <input class="form-input" type="number" id="orderQty" name="quantity" placeholder="1" min="1" max="9999" disabled>
+              <input class="form-input" type="number" id="orderQty" name="quantity" placeholder="1" min="1" max="9999">
               <span class="form-hint">Для оптовых цен — уточните количество</span>
             </div>
             <div class="form-group">
               <label class="form-label" for="orderComment">Комментарий</label>
-              <textarea class="form-textarea" id="orderComment" name="message" placeholder="Ваш вопрос или дополнительная информация..."></textarea>
+              <textarea class="form-textarea" id="orderComment" name="message" placeholder="Укажите адрес доставки или комментарий"></textarea>
             </div>
             <button class="btn btn-primary btn-full btn-lg" type="submit" id="orderModalSubmitBtn">
               Отправить заявку
@@ -386,11 +386,8 @@ function initOrderModal() {
   const modalTitle = document.getElementById('orderModalTitle');
   const successTitle = document.getElementById('orderSuccessTitle');
   const successMessage = document.getElementById('orderSuccessMessage');
-  const quantityGroup = document.getElementById('orderQuantityGroup');
   const quantityInput = document.getElementById('orderQty');
   const submitButton = document.getElementById('orderModalSubmitBtn');
-  const emailGroup = document.getElementById('orderEmailGroup');
-  const emailInput = document.getElementById('orderEmail');
 
   // Open modal
   window.openOrderModal = (productTitle = '', options = {}) => {
@@ -408,13 +405,7 @@ function initOrderModal() {
     }
     productIdInput.value = productId;
     quantityInput.value = productId ? String(options.quantity || 1) : '';
-    quantityGroup.hidden = !productId;
-    quantityInput.disabled = !productId;
     quantityInput.required = Boolean(productId);
-    emailGroup.hidden = !productId;
-    emailInput.disabled = !productId;
-    emailInput.required = Boolean(productId);
-    if (!productId) emailInput.value = '';
     modalTitle.textContent = productId ? 'Оформить заказ' : 'Оставить заявку';
     submitButton.textContent = productId ? 'Оформить заказ' : 'Отправить заявку';
     successTitle.textContent = productId ? 'Заказ принят!' : 'Заявка принята!';

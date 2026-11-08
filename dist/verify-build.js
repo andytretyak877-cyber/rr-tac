@@ -78,7 +78,12 @@ const privacyHtml = read(path.join('privacy', 'index.html'));
 if (!privacyHtml.includes('324508100648215') || !privacyHtml.includes('081405121944')) {
   fail('privacy/index.html: operator details are missing');
 }
-read('sitemap.xml');
+const offerHtml = read(path.join('offer', 'index.html'));
+if (!offerHtml.includes('324508100648215') || !offerHtml.includes('081405121944')) {
+  fail('offer/index.html: seller details are missing');
+}
+const sitemapXml = read('sitemap.xml');
+if (!sitemapXml.includes('/offer/</loc>')) fail('sitemap.xml: offer URL is missing');
 read('robots.txt');
 read('favicon.ico');
 
@@ -112,8 +117,12 @@ if (!/Promise\.allSettled\(\[\s*sendOrderToBackend\(form, items\),\s*sendLeadToR
 if (!mainJs.includes("email: form.elements.email?.value || ''") || !mainJs.includes("roistatData.delete('email')")) {
   fail('assets/js/main.js: order email routing is incomplete');
 }
-if (!mainJs.includes('quantityGroup.hidden = !productId;') || !mainJs.includes('quantityInput.disabled = !productId;')) {
-  fail('assets/js/main.js: popup quantity mode switching is incomplete');
+if (!/<input[^>]*type="email"[^>]*id="orderEmail"[^>]*name="email"[^>]*required/.test(mainJs)
+  || /id="orderEmailGroup"[^>]*hidden|id="orderEmail"[^>]*disabled/.test(mainJs)) {
+  fail('assets/js/main.js: popup email must always be visible, enabled, and required');
+}
+if (/id="orderQuantityGroup"[^>]*hidden|id="orderQty"[^>]*disabled/.test(mainJs)) {
+  fail('assets/js/main.js: popup quantity must always be visible and enabled');
 }
 if (!mainJs.includes('if (!emailAccepted && !roistatAccepted)')) {
   fail('assets/js/main.js: SMTP-or-Roistat success semantics changed');
@@ -180,6 +189,8 @@ for (const htmlFile of walk(dist).filter(file => file.endsWith('.html'))) {
     fail(`${relativePath}: legacy tracking or mask code remains`);
   }
   if (!html.includes('href="/favicon.ico"')) fail(`${relativePath}: favicon link is missing`);
+  const footer = html.match(/<footer\b[\s\S]*?<\/footer>/i)?.[0] || '';
+  if (!footer.includes('href="/offer/"')) fail(`${relativePath}: footer offer link is missing`);
   for (const [value, map, label] of [[titles[0], seenTitles, 'title'], [descriptions[0], seenDescriptions, 'description'], [canonicals[0], seenCanonicals, 'canonical']]) {
     if (!value) continue;
     if (map.has(value)) fail(`${relativePath}: duplicate ${label} also used in ${map.get(value)}`);

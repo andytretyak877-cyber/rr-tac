@@ -1212,6 +1212,10 @@ select {
   position: relative;
 }
 
+.product-card[hidden] {
+  display: none;
+}
+
 .product-card:hover {
   border-color: var(--clr-border-2);
   transform: translateY(-4px);

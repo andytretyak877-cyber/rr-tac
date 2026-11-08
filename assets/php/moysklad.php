@@ -331,10 +331,13 @@ function rr_build_customer_order_payload(array $order, array $context, array $co
         'state' => ['meta' => $context['state']],
         'salesChannel' => ['meta' => $context['sales_channel']],
         'agent' => ['meta' => $counterpartyMeta],
+        'shipmentAddressFull' => [
+            'addInfo' => $order['address'] ?? '',
+            'comment' => $order['comment'] ?? '',
+        ],
         'positions' => $positions,
     ];
     if (($order['address'] ?? '') !== '') $payload['shipmentAddress'] = $order['address'];
-    if (($order['comment'] ?? '') !== '') $payload['description'] = $order['comment'];
     return $payload;
 }
 

@@ -102,6 +102,7 @@ function absoluteAssets(html) {
     .replace(/href="about\.html"/g, 'href="/about/"')
     .replace(/href="contacts\.html"/g, 'href="/contacts/"')
     .replace(/href="privacy\.html"/g, 'href="/privacy/"')
+    .replace(/href="offer\.html"/g, 'href="/offer/"')
     .replace(/((?:href|src)="\/assets\/(?:css|js)\/[^"?]+\.(?:css|js))(?:\?[^"#]*)?"/g, `$1?v=${BUILD_VERSION}"`);
 }
 
@@ -246,7 +247,7 @@ function productCard(product, index = 0) {
       </div>
       <div class="product-card__footer">
         <a href="/product/${encodeURIComponent(product.id)}/" class="btn btn-secondary btn-sm">Подробнее</a>
-        <button class="btn btn-primary btn-sm" data-modal="order" data-product="${escapeHtml(product.name)}">Заявка</button>
+        <button class="btn btn-primary btn-sm" data-modal="order" data-product="${escapeHtml(product.name)}" data-order-product-id="${escapeHtml(product.id)}">Заявка</button>
       </div>
     </article>`;
 }
@@ -473,6 +474,14 @@ function copyStaticPages() {
       destination: 'contacts/index.html',
       seo: { title: 'Контакты интернет-магазина RR-TAC — Москва', description: 'Контакты магазина тактической медицины RR-TAC: info@rr-tac.ru, Telegram и адрес в Москве — набережная Академика Туполева, 3.', canonical: '/contacts/' },
     },
+    'offer.html': {
+      destination: 'offer/index.html',
+      seo: {
+        title: 'Публичная оферта интернет-магазина RR-TAC',
+        description: 'Условия заказа, оплаты, доставки и возврата товаров интернет-магазина RR-TAC. Реквизиты продавца и контакты для обращений.',
+        canonical: '/offer/',
+      },
+    },
     'privacy.html': {
       destination: 'privacy/index.html',
       seo: {
@@ -504,7 +513,7 @@ function copyServerUpdater() {
 }
 
 function buildSitemap() {
-  const paths = ['/', '/catalog/', '/cart/', '/delivery/', '/payment/', '/about/', '/contacts/'];
+  const paths = ['/', '/catalog/', '/cart/', '/delivery/', '/payment/', '/about/', '/contacts/', '/offer/'];
   const categories = [...new Set(products.map(product => product.category))];
   paths.push(...categories.map(category => `/catalog/${category}/`));
   paths.push(...products.map(product => `/product/${product.id}/`));
