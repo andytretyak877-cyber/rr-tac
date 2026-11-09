@@ -291,7 +291,15 @@ select {
   height: var(--header-h);
   display: flex;
   align-items: center;
-  transition: background var(--tr-slow), box-shadow var(--tr-slow);
+  transition: transform .25s ease, background var(--tr-slow), box-shadow var(--tr-slow);
+}
+
+.header.header--hidden {
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header { transition: none; }
 }
 
 .header.scrolled {
@@ -2257,7 +2265,7 @@ select {
   border-radius: var(--radius-lg);
   padding: 1.25rem;
   position: sticky;
-  top: calc(var(--header-h) + 1rem);
+  top: var(--sidebar-top, calc(var(--header-h) + 1rem));
 }
 
 .sidebar-title {

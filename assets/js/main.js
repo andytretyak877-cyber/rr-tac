@@ -196,13 +196,45 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ── Header scroll behaviour ── */
   const header = document.querySelector('.header');
   const scrollTopBtn = document.querySelector('.scroll-top');
+  let lastScrollY = window.scrollY;
+  let scrollDirection = 0;
+  let directionDistance = 0;
+  let scrollFrame = 0;
 
   const onScroll = () => {
-    const y = window.scrollY;
-    if (header) header.classList.toggle('scrolled', y > 40);
+    // Clamp elastic overscroll so it cannot reverse the header at page edges.
+    const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const y = Math.max(0, Math.min(window.scrollY, maxY));
+    const delta = y - lastScrollY;
+    const direction = Math.sign(delta);
+    if (direction && direction !== scrollDirection) directionDistance = 0;
+    if (direction) scrollDirection = direction;
+    directionDistance += Math.abs(delta);
+
+    if (header) {
+      header.classList.toggle('scrolled', y > 40);
+      const keyboardFocus = header.contains(document.activeElement)
+        && document.activeElement.matches(':focus-visible');
+      const menuOpen = header.querySelector('.burger.open');
+      if (y <= header.offsetHeight || document.body.classList.contains('modal-open') || menuOpen || keyboardFocus) {
+        header.classList.remove('header--hidden');
+        directionDistance = 0;
+      } else if (directionDistance >= 12) {
+        header.classList.toggle('header--hidden', scrollDirection > 0);
+        directionDistance = 0;
+      }
+    }
     if (scrollTopBtn) scrollTopBtn.classList.toggle('visible', y > 400);
+    lastScrollY = y;
+    scrollFrame = 0;
   };
-  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('scroll', () => {
+    if (!scrollFrame) scrollFrame = requestAnimationFrame(onScroll);
+  }, { passive: true });
+  header?.addEventListener('focusin', () => {
+    header.classList.remove('header--hidden');
+    directionDistance = 0;
+  });
   onScroll();
 
   if (scrollTopBtn) {

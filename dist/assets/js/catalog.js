@@ -39,6 +39,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const sidebarToggle = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('catalogSidebar');
 
+  // A tall sidebar travels with the page until its last items reach the viewport.
+  // Recalculate after resizing, zooming or changes to the sidebar's contents.
+  if (sidebar) {
+    const header = document.querySelector('.header');
+    const updateSidebarPosition = () => {
+      const gap = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const top = Math.min(
+        (header?.offsetHeight || 0) + gap,
+        window.innerHeight - sidebar.offsetHeight - gap
+      );
+      sidebar.style.setProperty('--sidebar-top', `${top}px`);
+    };
+    const sidebarObserver = new ResizeObserver(updateSidebarPosition);
+    sidebarObserver.observe(sidebar);
+    if (header) sidebarObserver.observe(header);
+    window.addEventListener('resize', updateSidebarPosition, { passive: true });
+    updateSidebarPosition();
+  }
+
   sidebarToggle?.addEventListener('click', () => {
     const isOpen = sidebar?.classList.toggle('open') || false;
     document.body.classList.toggle('modal-open', isOpen);
